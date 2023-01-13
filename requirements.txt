@@ -1,0 +1,4 @@
+streamlit==1.15.2
+newspaper3k
+
+
