@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 import re
 import threading
+import matplotlib.pyplot as plt
 
 
 def get_price_dolares():
@@ -200,7 +201,7 @@ def get_prices_Sercoplus(producto):
     df_sercoplus = pd.DataFrame({'imagen': images, 'nombre': names, 'precio_dolares': prices_dolares, 'precio_soles': prices_soles, 'link': links, 'stock': stocks})
     #convertir nombre a string
     df_sercoplus['nombre'] = df_sercoplus['nombre'].astype(str)
-
+    print('Sercoplus acabado')
 
 
 def get_info_products_Infotec(products):
@@ -322,6 +323,7 @@ def get_prices_Infotec(producto):
     df_infotec = df_infotec.reset_index(drop=True)
     #convertir la columna nombre a string
     df_infotec['nombre'] = df_infotec['nombre'].astype(str)
+    print('Infotec acabado')
 
 
 
@@ -343,6 +345,11 @@ st.title('Comparador de precios de componentes de PC')
 #recibimos el link de la pagina del usuario
 link = st.text_input('Ingrese el producto que desea buscar: ')
 #usamos un boton para que el usuario pueda enviar el link
+#hacer un menu para que el usuario pueda filtrar los productos
+st.sidebar.subheader('Filtrar productos')
+#filtrar por precio
+precio_min = st.sidebar.slider('Precio minimo en soles', min_value=0, max_value=10000, value=0, step=1)
+precio_max = st.sidebar.slider('Precio maximo en soles', min_value=0, max_value=10000, value=10000, step=1)
 if st.button('Enviar'):
     #poner un aviso de espere mientras se hace el request
     with st.spinner(text='Buscando los mejores precios...🕵️🪙🪄'):
@@ -365,7 +372,7 @@ if st.button('Enviar'):
         df_infotec = df_infotec.sort_values(by='precio_soles')
         df_infotec = df_infotec.reset_index(drop=True)
         #filtrar los productos que no tengan el nombre del producto buscado
-        df_sercoplus = filter_products(df_sercoplus, link)
+        #df_sercoplus = filter_products(df_sercoplus, link)
         df_infotec = filter_products(df_infotec, link)
         #resetear los indices
         df_sercoplus = df_sercoplus.reset_index(drop=True)
@@ -376,13 +383,43 @@ if st.button('Enviar'):
         #redondear precio en soles y dolares a 2 decimales de infotec
         df_infotec['precio_dolares'] = df_infotec['precio_dolares'].round(2)
         df_infotec['precio_soles'] = df_infotec['precio_soles'].round(2)
+    #hacer una grilla de 1 fila y 5 columnas
+    col1, col2 = st.columns(2)
+    #colocar el dataframe de sercoplus en la columna 1
+    with col1:
+        st.subheader('Sercoplus')
+        #escribir el nombre del primer producto en el dataframe
+        for i in range(len(df_sercoplus)):
+            #escribir el precio en soles y dolares del primer producto en el dataframe si el precio esta entre el rango de precio
+            if precio_min <= df_sercoplus['precio_soles'][i] <= precio_max:
+                st.write(df_sercoplus['nombre'][i])
+                st.image(df_sercoplus['imagen'][i])
+                st.write('Precio en soles: ', df_sercoplus['precio_soles'][i])
+                st.write('Precio en dolares: ', df_sercoplus['precio_dolares'][i])
+                #escribir el link del primer producto en el dataframe
+                st.write('Link: ', df_sercoplus['link'][i])
+                #escribir el stock del primer producto en el dataframe
+                st.write('Stock: ', df_sercoplus['stock'][i])
+                #escribir una linea horizontal
+                st.write('---------------------------------------')
+    #colocar el dataframe de infotec en la columna 2
+    with col2:
+        st.subheader('Infotec')
+        for i in range(len(df_infotec)):
+            #escribir el precio en soles y dolares del primer producto en el dataframe si el precio esta entre el rango de precio
+            if precio_min <= df_infotec['precio_soles'][i] <= precio_max:
+                st.write(df_infotec['nombre'][i])
+                st.image(df_infotec['imagen'][i])
+                #escribir el precio en soles y dolares del primer producto en el dataframe
+                st.write('Precio en soles: ', df_infotec['precio_soles'][i])
 
-    #haemos una tabla comparativa de los precios en soles de los 5 productos mas baratos
-    st.subheader('Comparativa de precios en soles')
-    st.write('Infotec')
-    st.table(df_infotec.head(5))
-    st.write('Sercoplus')
-    st.table(df_sercoplus.head(5))
+                st.write('Precio en dolares: ', df_infotec['precio_dolares'][i])
+                #escribir el link del primer producto en el dataframe
+                st.write('Link: ', df_infotec['link'][i])
+                #escribir el stock del primer producto en el dataframe
+                st.write('Stock: ', df_infotec['stock'][i])
+                #escribir una linea horizontal
+                st.write('---------------------------------------')
 
 
 
