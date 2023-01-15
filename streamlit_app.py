@@ -335,7 +335,13 @@ def filter_products(df, producto):
     df = df[df['nombre'].str.lower().str.contains(producto)]
     return df
 
-
+def get_prices_cyc_computer(producto):
+    #reemplazar espacios en blanco por %20
+    producto = producto.replace(' ', '+')
+    #definir url de busqueda
+    url = 'https://cyccomputer.pe/busqueda?controller=search&orderby=position&orderway=desc&search_category=all&s={}&order=product.price.asc'.format(producto)
+    #hacer request
+    response = requests
 
 
 
@@ -345,12 +351,7 @@ st.title('Comparador de precios de componentes de PC')
 #recibimos el link de la pagina del usuario
 link = st.text_input('Ingrese el producto que desea buscar: ')
 #usamos un boton para que el usuario pueda enviar el link
-#hacer un menu para que el usuario pueda filtrar los productos
-st.sidebar.subheader('Filtrar productos')
-#filtrar por precio
-precio_min = st.sidebar.slider('Precio minimo en soles', min_value=0, max_value=10000, value=0, step=1)
-precio_max = st.sidebar.slider('Precio maximo en soles', min_value=0, max_value=10000, value=10000, step=1)
-if st.button('Enviar'):
+if st.button('Buscar producto'):
     #poner un aviso de espere mientras se hace el request
     with st.spinner(text='Buscando los mejores precios...🕵️🪙🪄'):
         #crear 2 hilos para obtener los precios de los productos
@@ -391,35 +392,71 @@ if st.button('Enviar'):
         #escribir el nombre del primer producto en el dataframe
         for i in range(len(df_sercoplus)):
             #escribir el precio en soles y dolares del primer producto en el dataframe si el precio esta entre el rango de precio
-            if precio_min <= df_sercoplus['precio_soles'][i] <= precio_max:
-                st.write(df_sercoplus['nombre'][i])
-                st.image(df_sercoplus['imagen'][i])
-                st.write('Precio en soles: ', df_sercoplus['precio_soles'][i])
-                st.write('Precio en dolares: ', df_sercoplus['precio_dolares'][i])
-                #escribir el link del primer producto en el dataframe
-                st.write('Link: ', df_sercoplus['link'][i])
-                #escribir el stock del primer producto en el dataframe
-                st.write('Stock: ', df_sercoplus['stock'][i])
-                #escribir una linea horizontal
-                st.write('---------------------------------------')
+            st.write(df_sercoplus['nombre'][i])
+            st.image(df_sercoplus['imagen'][i])
+            st.write('Precio en soles: ', df_sercoplus['precio_soles'][i])
+            st.write('Precio en dolares: ', df_sercoplus['precio_dolares'][i])
+            #escribir el link del primer producto en el dataframe
+            st.write('Link: ', df_sercoplus['link'][i])
+            #escribir el stock del primer producto en el dataframe
+            st.write('Stock: ', df_sercoplus['stock'][i])
+            #escribir una linea horizontal
+            st.write('---------------------------------------')
+            #si i es igual a 4, entonces guardar los datos en un desplegable
+            if i == 4:
+                #crear un desplegable para mostrar los productos
+                with st.expander('Ver más productos'):
+                    #escribir el nombre del primer producto en el dataframe
+                    for j in range(i+1, len(df_sercoplus)):
+                        #escribir el precio en soles y dolares del primer producto en el dataframe si el precio esta entre el rango de precio
+                        st.write(df_sercoplus['nombre'][j])
+                        st.image(df_sercoplus['imagen'][j])
+                        st.write('Precio en soles: ', df_sercoplus['precio_soles'][j])
+                        st.write('Precio en dolares: ', df_sercoplus['precio_dolares'][j])
+                        #escribir el link del primer producto en el dataframe
+                        st.write('Link: ', df_sercoplus['link'][j])
+                        #escribir el stock del primer producto en el dataframe
+                        st.write('Stock: ', df_sercoplus['stock'][j])
+                        #escribir una linea horizontal
+                        st.write('---------------------------------------')
+                break
+
+                
     #colocar el dataframe de infotec en la columna 2
     with col2:
         st.subheader('Infotec')
         for i in range(len(df_infotec)):
             #escribir el precio en soles y dolares del primer producto en el dataframe si el precio esta entre el rango de precio
-            if precio_min <= df_infotec['precio_soles'][i] <= precio_max:
-                st.write(df_infotec['nombre'][i])
-                st.image(df_infotec['imagen'][i])
-                #escribir el precio en soles y dolares del primer producto en el dataframe
-                st.write('Precio en soles: ', df_infotec['precio_soles'][i])
+            st.write(df_infotec['nombre'][i])
+            st.image(df_infotec['imagen'][i])
+            #escribir el precio en soles y dolares del primer producto en el dataframe
+            st.write('Precio en soles: ', df_infotec['precio_soles'][i])
 
-                st.write('Precio en dolares: ', df_infotec['precio_dolares'][i])
-                #escribir el link del primer producto en el dataframe
-                st.write('Link: ', df_infotec['link'][i])
-                #escribir el stock del primer producto en el dataframe
-                st.write('Stock: ', df_infotec['stock'][i])
-                #escribir una linea horizontal
-                st.write('---------------------------------------')
+            st.write('Precio en dolares: ', df_infotec['precio_dolares'][i])
+            #escribir el link del primer producto en el dataframe
+            st.write('Link: ', df_infotec['link'][i])
+            #escribir el stock del primer producto en el dataframe
+            st.write('Stock: ', df_infotec['stock'][i])
+            #escribir una linea horizontal
+            st.write('---------------------------------------')
+            #si i es igual a 4, entonces guardar los datos en un desplegable
+            if i == 4:
+                #crear un desplegable
+                with st.expander('Ver más'):
+                    for j in range(i+1, len(df_infotec)):
+                        #escribir el precio en soles y dolares del primer producto en el dataframe si el precio esta entre el rango de precio
+                        st.write(df_infotec['nombre'][j])
+                        st.image(df_infotec['imagen'][j])
+                        st.write('Precio en soles: ', df_infotec['precio_soles'][j])
+                        st.write('Precio en dolares: ', df_infotec['precio_dolares'][j])
+                        #escribir el link del primer producto en el dataframe
+                        st.write('Link: ', df_infotec['link'][j])
+                        #escribir el stock del primer producto en el dataframe
+                        st.write('Stock: ', df_infotec['stock'][j])
+                        #escribir una linea horizontal
+                        st.write('---------------------------------------')
+                break
+
 
 
 
