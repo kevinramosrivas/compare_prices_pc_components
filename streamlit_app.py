@@ -8,6 +8,7 @@ import re
 import threading
 import matplotlib.pyplot as plt
 import concurrent.futures
+import time
 
 def get_price_dolares():
     #obtener el tipo de cambio
@@ -137,7 +138,17 @@ def get_number_pages(soup):
     pages = int(pages)
     return pages
 
+def get_html_Sercoplus(url):
+    #obtener html de la url
+    response = requests.get(url)
+    html = response.text
+    return html
+
+
+
 def get_prices_Sercoplus(producto):
+    #contar el tiempo de inicio
+    start_time = time.time()
     #reemplazar espacios en blanco por %20
     producto = producto.replace(' ', '%20')
     #definir url de busqueda
@@ -162,18 +173,19 @@ def get_prices_Sercoplus(producto):
     prices_soles = []
     links = []
     stocks = []
-
+    pages_url_list = []
     #si hay mas de una pagina el url cambia
     if pages > 1: 
-        #recorrer paginas
+        pages_url_list = []
+        #guardar el url de cada pagina en una lista
         for page in range(1, pages+1):
-            #definir url de busqueda
-            url = 'https://www.sercoplus.com/busqueda?controller=search&s={}&order=product.price.asc&page={}'.format(producto, page)
-            #hacer request
-            response = requests.get(url)
-            html = response.text
-            #parsear html
-            soup = BeautifulSoup(html, 'html.parser')
+            pages_url_list.append('https://www.sercoplus.com/busqueda?controller=search&s={}&order=product.price.asc&page={}'.format(producto, page))
+        #crear pool de procesos
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+          html = executor.map(get_html_Sercoplus, pages_url_list)
+        #recorrer html de cada pagina
+        for html_page in html:
+            soup = BeautifulSoup(html_page, 'html.parser')
             #capturar todos los productos
             products = soup.find_all('article', class_='product-miniature js-product-miniature')
             #obtener informacion de los productos
@@ -204,7 +216,9 @@ def get_prices_Sercoplus(producto):
     df_sercoplus['nombre'] = df_sercoplus['nombre'].astype(str)
     df_sercoplus = df_sercoplus.sort_values(by='precio_soles')
     df_sercoplus = df_sercoplus.reset_index(drop=True)
-    print('Sercoplus acabado')
+    #contar el tiempo de finalizacion
+    end_time = time.time()
+    print('Sercoplus acabado en {} segundos'.format(end_time - start_time))
 
 
 def get_info_products_Infotec(products):
@@ -263,11 +277,12 @@ def get_html_pags_Infotec(url):
 
 
 def get_prices_Infotec(producto):
+    #contar el tiempo de inicio
+    start_time = time.time()
     #reemplazar espacios en blanco por %20
     producto = producto.replace(' ', '+')
     #definir url de busqueda
     url = 'https://www.infotec.com.pe/busquedas?search_query=={}'.format(producto)
-    
     #hacer request
     response = requests.get(url)
     html = response.text
@@ -336,7 +351,9 @@ def get_prices_Infotec(producto):
     df_infotec['nombre'] = df_infotec['nombre'].astype(str)
     df_infotec = df_infotec.sort_values(by='precio_soles')
     df_infotec = df_infotec.reset_index(drop=True)
-    print('Infotec acabado')
+    #tomar el tiempo de ejecucion
+    end_time = time.time()
+    print('Infotec acabado en {} segundos'.format(end_time-start_time))
 
 
 
