@@ -7,7 +7,7 @@ import streamlit as st
 import re
 import threading
 import matplotlib.pyplot as plt
-
+import concurrent.futures
 
 def get_price_dolares():
     #obtener el tipo de cambio
@@ -254,6 +254,11 @@ def get_info_products_Infotec(products):
         stock_list.append(stock)
     return image_list, name_list, price_list_dolares,  price_list_soles, link_list, stock_list
 
+def get_html_pags_Infotec(url):
+    #obtener html de la url
+    response = requests.get(url)
+    html = response.text
+    return html
 
 
 
@@ -294,18 +299,11 @@ def get_prices_Infotec(producto):
         #guardar el url de cada pagina en una lista
         for page in range(1, pages+1):
             pages_url_list.append('https://www.infotec.com.pe/busquedas?page={}&search_query={}'.format(page, producto))
-        #gurdar la lista como un dataframe
-        df_pages_url = pd.DataFrame({'url': pages_url_list})
-        #guardar el dataframe como un csv
-        df_pages_url.to_csv('pages_url.csv', index=False)
-        for page in range(1, pages+1):
-            #definir url de busqueda
-            url= 'https://www.infotec.com.pe/busquedas?page={}&search_query={}'.format(page, producto)
-            #hacer request
-            response = requests.get(url)
-            html = response.text
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+          html = executor.map(get_html_pags_Infotec, pages_url_list)
+        for codigo in html:
             #parsear html
-            soup = BeautifulSoup(html, 'html.parser')
+            soup = BeautifulSoup(codigo, 'html.parser')
             #capturar todos los productos
             products = soup.find_all('article', class_='product-miniature product-item js-product-miniature')
             #obtener informacion de los productos
