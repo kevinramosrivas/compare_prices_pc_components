@@ -9,6 +9,7 @@ import threading
 import matplotlib.pyplot as plt
 import concurrent.futures
 import time
+not_found_img = 'not_found.png'
 
 def get_price_dolares():
     #obtener el tipo de cambio
@@ -33,6 +34,8 @@ def get_price_dolares():
 df_sercoplus = pd.DataFrame(columns=['imagen', 'nombre', 'precio_dolares', 'precio_soles', 'link', 'stock'])
 #crear un dataframe para que servira para guardar los datos de infotec
 df_infotec = pd.DataFrame(columns=['imagen', 'nombre', 'precio_dolares', 'precio_soles', 'link', 'stock'])
+#crear un dataframe para que servira para guardar los datos de cc computer
+df_cccomputer = pd.DataFrame(columns=['imagen', 'nombre', 'precio_dolares', 'precio_soles', 'link', 'stock'])
 #variable para guardar el tipo de cambio hoy
 tipo_cambio = get_price_dolares()
 
@@ -138,7 +141,8 @@ def get_number_pages(soup):
     pages = int(pages)
     return pages
 
-def get_html_Sercoplus(url):
+
+def get_html_pags(url):
     #obtener html de la url
     response = requests.get(url)
     html = response.text
@@ -182,7 +186,7 @@ def get_prices_Sercoplus(producto):
             pages_url_list.append('https://www.sercoplus.com/busqueda?controller=search&s={}&order=product.price.asc&page={}'.format(producto, page))
         #crear pool de procesos
         with concurrent.futures.ThreadPoolExecutor() as executor:
-          html = executor.map(get_html_Sercoplus, pages_url_list)
+          html = executor.map(get_html_pags, pages_url_list)
         #recorrer html de cada pagina
         for html_page in html:
             soup = BeautifulSoup(html_page, 'html.parser')
@@ -268,14 +272,6 @@ def get_info_products_Infotec(products):
         stock_list.append(stock)
     return image_list, name_list, price_list_dolares,  price_list_soles, link_list, stock_list
 
-def get_html_pags_Infotec(url):
-    #obtener html de la url
-    response = requests.get(url)
-    html = response.text
-    return html
-
-
-
 def get_prices_Infotec(producto):
     #contar el tiempo de inicio
     start_time = time.time()
@@ -315,7 +311,7 @@ def get_prices_Infotec(producto):
         for page in range(1, pages+1):
             pages_url_list.append('https://www.infotec.com.pe/busquedas?page={}&search_query={}'.format(page, producto))
         with concurrent.futures.ThreadPoolExecutor() as executor:
-          html = executor.map(get_html_pags_Infotec, pages_url_list)
+          html = executor.map(get_html_pags, pages_url_list)
         for codigo in html:
             #parsear html
             soup = BeautifulSoup(codigo, 'html.parser')
@@ -355,6 +351,138 @@ def get_prices_Infotec(producto):
     end_time = time.time()
     print('Infotec acabado en {} segundos'.format(end_time-start_time))
 
+def get_info_products_cc_computer(products):
+    #crear listas de imagen, nombre, precio en dolares, precio en soles, link y stock
+    image_list = []
+    name_list = []
+    price_list_soles = []
+    price_list_dolares = []
+    link_list = []
+    stock_list = []
+    #recorrer todos los productos
+    for product in products:
+        description = product.find('div', class_='laber-product-description')
+        #obtener imagen
+        image = product.find('div', class_='laberProduct-image')
+        image = image.find('img')
+        image = image['src']
+        #si no hay imagen, rellenar con None
+        if image == '':
+             image = None
+        #obtener el stock para evitar procesar productos sin stock class="product-quantities manufacturer_name"
+        stock = description.find('div', class_='product-quantities manufacturer_name')
+        #si no hay stock, saltar al siguiente producto
+        if stock is None:
+            continue
+        #obtener solo los numeros del stock
+        stock = stock.text
+        stock = clean_stock(stock)
+        #obtener nombre en h2 con clase productName
+        name = description.find('h2', class_='productName')
+        name = name.find('a')
+        #obtener el link del producto del href del nombre
+        link = name['href']
+        name = name.text
+        #buscar 'laber-product-price-and-shipping' o 'laber-product-price-and-shipping '
+        price = product.find('div', class_='laber-product-price-and-shipping')
+        #hay 2 etiquetas span con clase price, la primera es el precio en soles y la segunda es el precio en dolares
+        price = price.find_all('span', class_='price')
+        #obtener el precio en soles
+        price_dolares = price[0]
+        price_dolares = price_dolares.text
+        # #eliminar el simbolo de soles
+        price_dolares = clean_price_dollars(price_dolares)
+        price_soles = price[1]
+        price_soles = price_soles.text
+        # #eliminar el simbolo de dolares
+        price_soles = clean_price_soles(price_soles)
+        #convertir los precios a float
+        #agregar a las listas
+        image_list.append(image)
+        name_list.append(name)
+        price_list_soles.append(price_soles)
+        price_list_dolares.append(price_dolares)
+        link_list.append(link)
+        stock_list.append(stock)
+    return image_list, name_list, price_list_dolares,  price_list_soles, link_list, stock_list
+def get_prices_cc_computer(producto):
+    global df_cccomputer
+    #reemplazar espacios en blanco por %20
+    producto = producto.replace(' ', '+')
+    #definir url de busqueda
+    url = 'https://cyccomputer.pe/busqueda?controller=search&orderby=position&orderway=desc&search_category=all&s={}'.format(producto)
+    #hacer request
+    response = requests.get(url)
+    html = response.text
+    #crear lista de imagen, nombre,link y precio en soles
+    images = []
+    names = []
+    links = []
+    prices_soles = []
+    stocks = []
+    price_dolares = []
+    #parsear html
+    soup = BeautifulSoup(html, 'html.parser')
+    #buscar un nav con la clase pagination 
+    pagination = soup.find('nav', class_='pagination')
+    if pagination is None:
+        #retornar un dataframe vacio
+        df_cc_computer = pd.DataFrame({'imagen':images, 'nombre':names, 'precio_soles':prices_soles, 'precio_dolares':price_dolares, 'link':links, 'stock':stocks})
+        print('No hay resultados para {}'.format(producto))
+        return df_cc_computer
+    #buscar ul nav-links
+    pages_ul = pagination.find('ul', class_='page-list')
+    #buscar li
+    li = pages_ul.find_all('li')
+    #ver cuantos elementos hay en la lista
+    if len(li) == 1 or pagination is None:
+        pages = 1
+    else:
+        pages = pages_ul.find_all('li')
+        #si no hay paginas, solo hay un elemento
+        #obtener el numero de paginas en el penultimo elemento
+        pages = pages[-2].text
+        pages = int(pages)
+    #si hay mas de una pagina el url cambia
+    if pages > 1:
+        pages_url_list = []
+        #guardar el url de cada pagina en una lista
+        for page in range(1, pages+1):
+            pages_url_list.append('https://cyccomputer.pe/busqueda?controller=search&orderby=position&orderway=desc&search_category=all&s={}&page={}'.format(producto, page))
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+          html = executor.map(get_html_pags, pages_url_list)
+        for codigo in html:
+            #parsear html
+            soup = BeautifulSoup(codigo, 'html.parser')
+            products = soup.find_all('article', class_='product-miniature')
+            #obtener informacion de los productos
+            image_list, name_list, price_list_dolares, price_list_soles, link_list, stock_list = get_info_products_cc_computer(products)
+            # agregar a las listas
+            images.extend(image_list)
+            names.extend(name_list)
+            prices_soles.extend(price_list_soles)
+            links.extend(link_list)
+            stocks.extend(stock_list)
+            price_dolares.extend(price_list_dolares)
+    else:
+        #capturar todos los productos
+        products = soup.find_all('div', class_='item-inner')
+        #obtener informacion de los productos
+        image_list, name_list, price_list_dolares, price_list_soles, link_list, stock_list = get_info_products_cc_computer(products)
+        #agregar a las listas
+        images.extend(image_list)
+        names.extend(name_list)
+        prices_soles.extend(price_list_soles)
+        links.extend(link_list)
+        stocks.extend(stock_list)
+        price_dolares.extend(price_list_dolares)
+    #guardar en dataframe df_infotec con las listas ordenadas por precio en soles
+    df_cccomputer = pd.DataFrame({'imagen':images, 'nombre':names, 'precio_soles':prices_soles, 'precio_dolares':price_dolares, 'link':links, 'stock':stocks})
+    df_cccomputer = df_cccomputer.sort_values(by='precio_soles')
+    df_cccomputer = df_cccomputer.reset_index(drop=True)
+    #convertir la columna nombre a string
+    df_cccomputer['nombre'] = df_cccomputer['nombre'].astype(str)
+    print('CyC computer acabado')
 
 
 #eliminar productos que no tengan el nombre del producto buscado
@@ -377,6 +505,46 @@ def filter_products(df, producto):
     df_new.to_csv('productos filtrados.csv')
     return df_new
 
+#crear un mejor filtro para los productos
+def filter_products2(df, producto):
+    #convertir a minuscula
+    producto_lower = producto.lower()
+    #si es que el producto esta compuesto de mas de una palabra
+    #asegurarse de que cada palabra aparezca al menos una vez en el nombre
+    #sin importar si estan juntas o no
+    if len(producto_lower.split()) > 1:
+        #crear una lista de palabras
+        palabras = producto_lower.split()
+        #crear una lista de indices
+        indices = []
+        #iterar sobre el dataframe
+        for index, row in df.iterrows():
+            #crear una lista de palabras del nombre del producto
+            palabras_nombre = row['nombre'].lower().split()
+            #crear una lista de palabras que no estan en el nombre
+            palabras_faltantes = [palabra for palabra in palabras if palabra not in palabras_nombre]
+            #si la lista esta vacia, significa que todas las palabras estan en el nombre
+            if len(palabras_faltantes) == 0:
+                indices.append(index)
+        #crear un nuevo dataframe con los indices
+        df_new = df.iloc[indices]
+        df_new = df_new.reset_index(drop=True)
+        #guardar en un csv
+        return df_new
+    else:
+        #si es que el producto solo tiene una palabra
+        #crear una lista de indices
+        indices = []
+        #iterar sobre el dataframe
+        for index, row in df.iterrows():
+            #buscar el producto en el nombre
+            if producto_lower in row['nombre'].lower():
+                indices.append(index)
+        #crear un nuevo dataframe con los indices
+        df_new = df.iloc[indices]
+        df_new = df_new.reset_index(drop=True)
+        return df_new
+
 
 
 
@@ -394,22 +562,27 @@ if st.button('Buscar producto'):
         t1 = threading.Thread(target=get_prices_Sercoplus, args=(link,))
         #hilo 2: infotec
         t2 = threading.Thread(target=get_prices_Infotec, args=(link,))
+        #hilo 3: cc computer
+        t3 = threading.Thread(target=get_prices_cc_computer, args=(link,))
         #iniciar los hilos
         t1.start()
         t2.start()
+        t3.start()
         #esperar a que los hilos terminen
         t1.join()
         t2.join()
-        st.success('Precios encontrados!🪙🪄')
+        t3.join()
+        st.success('Mejores Precios encontrados!🪙🪄')
         #crear un dataframe con los precios de los productos
         #comparemos los precios en soles de los dos dataframes
         #guardar los precios en un csv
         df_sercoplus.to_csv('precios_sercoplus.csv', index=False)
         df_infotec.to_csv('precios_infotec.csv', index=False)
+        df_cccomputer.to_csv('precios_cccomputer.csv', index=False)
         # #filtrar los productos que no tengan el nombre del producto buscado
-        #df_sercoplus = filter_products(df_sercoplus, link)
-        df_infotec_filter = filter_products(df_infotec, link)
-        #df_infotec_filter = df_infotec
+        # df_sercoplus = filter_products2(df_sercoplus, link)
+        df_infotec_filter = filter_products2(df_infotec, link)
+        # df_cccomputer = filter_products2(df_cccomputer,link)
         #redondear precio en soles y dolares a 2 decimales de sercoplus
         df_sercoplus['precio_dolares'] = df_sercoplus['precio_dolares'].round(2)
         df_sercoplus['precio_soles'] = df_sercoplus['precio_soles'].round(2)
@@ -417,17 +590,18 @@ if st.button('Buscar producto'):
         df_infotec_filter['precio_dolares'] = df_infotec_filter['precio_dolares'].round(2)
         df_infotec_filter['precio_soles'] = df_infotec_filter['precio_soles'].round(2)
     #hacer una grilla de 1 fila y 5 columnas
-    col1, col2 = st.columns(2)
+    col1, col2 , col3 = st.columns(3)
     #colocar el dataframe de sercoplus en la columna 1
     with col1:
         st.subheader('Sercoplus')
         #escribir el nombre del primer producto en el dataframe
         for i in range(len(df_sercoplus)):
-            #escribir el precio en soles y dolares del primer producto en el dataframe si el precio esta entre el rango de precio
             st.write(df_sercoplus['nombre'][i])
             #si es que no hay el indice de la imagen, entonces no mostrar la imagen
-
-            st.image(df_sercoplus['imagen'][i])
+            if df_sercoplus['imagen'][i] is None:
+                st.image(not_found_img)
+            else:
+                st.image(df_sercoplus['imagen'][i])
             st.write('Precio en soles: ', df_sercoplus['precio_soles'][i])
             st.write('Precio en dolares: ', df_sercoplus['precio_dolares'][i])
             #escribir el link del primer producto en el dataframe
@@ -439,12 +613,14 @@ if st.button('Buscar producto'):
             #si i es igual a 4, entonces guardar los datos en un desplegable
             if i == 4:
                 #crear un desplegable para mostrar los productos
-                with st.expander('Ver más productos'):
+                with st.expander('Ver más productos de Sercoplus'):
                     #escribir el nombre del primer producto en el dataframe
                     for j in range(i+1, len(df_sercoplus)):
-                        #escribir el precio en soles y dolares del primer producto en el dataframe si el precio esta entre el rango de precio
                         st.write(df_sercoplus['nombre'][j])
-                        st.image(df_sercoplus['imagen'][j])
+                        if df_sercoplus['imagen'][j] is None:
+                            st.image(not_found_img)
+                        else:
+                            st.image(df_sercoplus['imagen'][j])
                         st.write('Precio en soles: ', df_sercoplus['precio_soles'][j])
                         st.write('Precio en dolares: ', df_sercoplus['precio_dolares'][j])
                         #escribir el link del primer producto en el dataframe
@@ -460,11 +636,10 @@ if st.button('Buscar producto'):
     with col2:
         st.subheader('Infotec')
         for i in range(len(df_infotec_filter)):
-            #escribir el precio en soles y dolares del primer producto en el dataframe si el precio esta entre el rango de precio
             st.write(df_infotec_filter['nombre'][i])
             #si imagen es none, entonces mostrar una imagen por defecto
             if df_infotec_filter['imagen'][i] is None:
-                st.image('data:image/png;base64,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')
+                st.image(not_found_img)
             else:
                 st.image(df_infotec_filter['imagen'][i])
             #escribir el precio en soles y dolares del primer producto en el dataframe
@@ -479,12 +654,12 @@ if st.button('Buscar producto'):
             #si i es igual a 4, entonces guardar los datos en un desplegable
             if i == 4:
                 #crear un desplegable
-                with st.expander('Ver más'):
+                with st.expander('Ver más productos de Infotec'):
                     for j in range(i+1, len(df_infotec_filter)):
                         #escribir el precio en soles y dolares del primer producto en el dataframe si el precio esta entre el rango de precio
                         st.write(df_infotec_filter['nombre'][j])
                         if df_infotec_filter['imagen'][j] is None:
-                            st.image('data:image/png;base64,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')
+                            st.image(not_found_img)
                         else:
                             st.image(df_infotec_filter['imagen'][j])
                         st.write('Precio en soles: ', df_infotec_filter['precio_soles'][j])
@@ -496,6 +671,50 @@ if st.button('Buscar producto'):
                         #escribir una linea horizontal
                         st.write('---------------------------------------')
                 break
+    #colocar el dataframe de cc computer en la columna 3
+    with col3:
+        #escribir el titulo de la columna
+        st.subheader('CC Computer')
+        #escribir el dataframe de cc computer
+        for i in range(len(df_cccomputer)):
+            st.write(df_cccomputer['nombre'][i])
+            #si es que no hay el indice de la imagen, entonces no mostrar la imagen
+            if df_cccomputer['imagen'][i] is None:
+                st.image(not_found_img)
+            else:
+                st.image(df_cccomputer['imagen'][i])
+            st.write('Precio en soles: ', df_cccomputer['precio_soles'][i])
+            st.write('Precio en dolares: ', df_cccomputer['precio_dolares'][i])
+            #escribir el link del primer producto en el dataframe
+            st.write('Link: ', df_cccomputer['link'][i])
+            #escribir el stock del primer producto en el dataframe
+            st.write('Stock: ', df_cccomputer['stock'][i])
+            #escribir una linea horizontal
+            st.write('---------------------------------------')
+            #si i es igual a 4, entonces guardar los datos en un desplegable
+            if i == 4:
+                #escribir un boton para ver mas productos
+                with st.expander('Ver mas productos de CyC computer'):
+                    #escribir el dataframe de cc computer
+                    for j in range(i+1,len(df_cccomputer)):
+                        st.write(df_cccomputer['nombre'][j])
+                        #si es que no hay el indice de la imagen, entonces no mostrar la imagen
+                        if df_cccomputer['imagen'][j] is None:
+                            st.image(not_found_img)
+                        else:
+                            st.image(df_cccomputer['imagen'][j])
+                        st.write('Precio en soles: ', df_cccomputer['precio_soles'][j])
+                        st.write('Precio en dolares: ', df_cccomputer['precio_dolares'][j])
+                        #escribir el link del primer producto en el dataframe
+                        st.write('Link: ', df_cccomputer['link'][j])
+                        #escribir el stock del primer producto en el dataframe
+                        st.write('Stock: ', df_cccomputer['stock'][j])
+                        #escribir una linea horizontal
+                        st.write('---------------------------------------')
+                break
+
+
+
 
 
 
