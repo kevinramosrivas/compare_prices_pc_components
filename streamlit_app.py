@@ -731,6 +731,8 @@ if st.button('Buscar producto'):
                         #escribir una linea horizontal
                         st.write('---------------------------------------')
                 break
+#hacer un footer
+st.write('Hecho por [Kevin Ramos Rivas](https://github.com/KevinRamosRivas) 👨‍💻')
 
 
 
