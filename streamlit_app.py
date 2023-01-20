@@ -577,10 +577,10 @@ if st.button('Buscar producto'):
         st.success('Mejores Precios encontrados!🪙🪄')
         #crear un dataframe con los precios de los productos
         #comparemos los precios en soles de los dos dataframes
-        #guardar los precios en un csv
-        df_sercoplus.to_csv('precios_sercoplus.csv', index=False)
-        df_infotec.to_csv('precios_infotec.csv', index=False)
-        df_cccomputer.to_csv('precios_cccomputer.csv', index=False)
+        # #guardar los precios en un csv
+        # df_sercoplus.to_csv('precios_sercoplus.csv', index=False)
+        # df_infotec.to_csv('precios_infotec.csv', index=False)
+        # df_cccomputer.to_csv('precios_cccomputer.csv', index=False)
         # #filtrar los productos que no tengan el nombre del producto buscado
         # df_sercoplus = filter_products2(df_sercoplus, link)
         df_infotec_filter = filter_products2(df_infotec, link)
