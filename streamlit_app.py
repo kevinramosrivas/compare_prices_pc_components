@@ -328,7 +328,7 @@ def get_prices_Infotec(producto):
             price_dolares.extend(price_list_dolares)
     else:
         #capturar todos los productos
-        products = soup.find_all('article', class_='product-miniature product-item')
+        products = soup.find_all('article', class_='product-miniature product-item js-product-miniature')
         #obtener informacion de los productos
         image_list, name_list, price_list_dolares, price_list_soles, link_list, stock_list = get_info_products_Infotec(products)
         #agregar a las listas
@@ -377,6 +377,8 @@ def get_info_products_cc_computer(products):
         #obtener solo los numeros del stock
         stock = stock.text
         stock = clean_stock(stock)
+        if stock == 0:
+            continue
         #obtener nombre en h2 con clase productName
         name = description.find('h2', class_='productName')
         name = name.find('a')
@@ -589,11 +591,14 @@ if st.button('Buscar producto'):
         #redondear precio en soles y dolares a 2 decimales de infotec
         df_infotec_filter['precio_dolares'] = df_infotec_filter['precio_dolares'].round(2)
         df_infotec_filter['precio_soles'] = df_infotec_filter['precio_soles'].round(2)
-    #hacer una grilla de 1 fila y 5 columnas
+    #hacer una grilla de 3 columnas
     col1, col2 , col3 = st.columns(3)
     #colocar el dataframe de sercoplus en la columna 1
     with col1:
+        st.image('sercoplus_logo.jpg')
         st.subheader('Sercoplus')
+        if len(df_sercoplus) == 0:
+            st.write('😢 No se encontro el producto en Sercoplus')
         #escribir el nombre del primer producto en el dataframe
         for i in range(len(df_sercoplus)):
             st.write(df_sercoplus['nombre'][i])
@@ -604,10 +609,11 @@ if st.button('Buscar producto'):
                 st.image(df_sercoplus['imagen'][i])
             st.write('Precio en soles: ', df_sercoplus['precio_soles'][i])
             st.write('Precio en dolares: ', df_sercoplus['precio_dolares'][i])
-            #escribir el link del primer producto en el dataframe
-            st.write('Link: ', df_sercoplus['link'][i])
             #escribir el stock del primer producto en el dataframe
             st.write('Stock: ', df_sercoplus['stock'][i])
+            #link acortado
+            link = '[Ir al producto](' + df_sercoplus['link'][i] + ')'
+            st.markdown(link)
             #escribir una linea horizontal
             st.write('---------------------------------------')
             #si i es igual a 4, entonces guardar los datos en un desplegable
@@ -623,10 +629,11 @@ if st.button('Buscar producto'):
                             st.image(df_sercoplus['imagen'][j])
                         st.write('Precio en soles: ', df_sercoplus['precio_soles'][j])
                         st.write('Precio en dolares: ', df_sercoplus['precio_dolares'][j])
-                        #escribir el link del primer producto en el dataframe
-                        st.write('Link: ', df_sercoplus['link'][j])
                         #escribir el stock del primer producto en el dataframe
                         st.write('Stock: ', df_sercoplus['stock'][j])
+                        #link acortado
+                        link = '[Ir al producto](' + df_sercoplus['link'][j] + ')'
+                        st.markdown(link)
                         #escribir una linea horizontal
                         st.write('---------------------------------------')
                 break
@@ -634,7 +641,10 @@ if st.button('Buscar producto'):
                 
     #colocar el dataframe de infotec en la columna 2
     with col2:
+        st.image('infotec_logo.jpg')
         st.subheader('Infotec')
+        if len(df_infotec_filter) == 0:
+            st.write('😢 No se encontro el producto en Infotec')
         for i in range(len(df_infotec_filter)):
             st.write(df_infotec_filter['nombre'][i])
             #si imagen es none, entonces mostrar una imagen por defecto
@@ -645,10 +655,11 @@ if st.button('Buscar producto'):
             #escribir el precio en soles y dolares del primer producto en el dataframe
             st.write('Precio en soles: ', df_infotec_filter['precio_soles'][i])
             st.write('Precio en dolares: ', df_infotec_filter['precio_dolares'][i])
-            #escribir el link del primer producto en el dataframe
-            st.write('Link: ', df_infotec_filter['link'][i])
             #escribir el stock del primer producto en el dataframe
             st.write('Stock: ', df_infotec_filter['stock'][i])
+            #link acortado
+            link = '[Ir al producto](' + df_infotec_filter['link'][i] + ')'
+            st.markdown(link)
             #escribir una linea horizontal
             st.write('---------------------------------------')
             #si i es igual a 4, entonces guardar los datos en un desplegable
@@ -664,17 +675,23 @@ if st.button('Buscar producto'):
                             st.image(df_infotec_filter['imagen'][j])
                         st.write('Precio en soles: ', df_infotec_filter['precio_soles'][j])
                         st.write('Precio en dolares: ', df_infotec_filter['precio_dolares'][j])
-                        #escribir el link del primer producto en el dataframe
-                        st.write('Link: ', df_infotec_filter['link'][j])
                         #escribir el stock del primer producto en el dataframe
                         st.write('Stock: ', df_infotec_filter['stock'][j])
+                        #link acortado
+                        link = '[Ir al producto](' + df_infotec_filter['link'][j] + ')'
+                        st.markdown(link)
                         #escribir una linea horizontal
                         st.write('---------------------------------------')
                 break
     #colocar el dataframe de cc computer en la columna 3
     with col3:
+        st.image('cc_computer_logo.png')
+        #dejar espacio en blanco
         #escribir el titulo de la columna
-        st.subheader('CC Computer')
+        st.subheader('C&C Computer')
+        #si el dataframe esta vacio, entonces mostrar un mensaje
+        if len(df_cccomputer) == 0:
+            st.write('😢 No se encontro el producto en C&C Computer')
         #escribir el dataframe de cc computer
         for i in range(len(df_cccomputer)):
             st.write(df_cccomputer['nombre'][i])
@@ -685,10 +702,11 @@ if st.button('Buscar producto'):
                 st.image(df_cccomputer['imagen'][i])
             st.write('Precio en soles: ', df_cccomputer['precio_soles'][i])
             st.write('Precio en dolares: ', df_cccomputer['precio_dolares'][i])
-            #escribir el link del primer producto en el dataframe
-            st.write('Link: ', df_cccomputer['link'][i])
             #escribir el stock del primer producto en el dataframe
             st.write('Stock: ', df_cccomputer['stock'][i])
+            #link acortado
+            link = '[Ir al producto](' + df_cccomputer['link'][i] + ')'
+            st.markdown(link)
             #escribir una linea horizontal
             st.write('---------------------------------------')
             #si i es igual a 4, entonces guardar los datos en un desplegable
@@ -705,10 +723,11 @@ if st.button('Buscar producto'):
                             st.image(df_cccomputer['imagen'][j])
                         st.write('Precio en soles: ', df_cccomputer['precio_soles'][j])
                         st.write('Precio en dolares: ', df_cccomputer['precio_dolares'][j])
-                        #escribir el link del primer producto en el dataframe
-                        st.write('Link: ', df_cccomputer['link'][j])
                         #escribir el stock del primer producto en el dataframe
                         st.write('Stock: ', df_cccomputer['stock'][j])
+                        #link acortado
+                        link = '[Ir al producto](' + df_cccomputer['link'][j] + ')'
+                        st.markdown(link)
                         #escribir una linea horizontal
                         st.write('---------------------------------------')
                 break

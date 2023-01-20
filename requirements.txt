@@ -1,4 +1,5 @@
 streamlit==1.15.2
-newspaper3k
+beautifulsoup4
+matplotlib
 
 
